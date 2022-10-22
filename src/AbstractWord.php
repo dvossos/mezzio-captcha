@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Laminas\Captcha;
 
-use Mezzio\Session\SessionInterface;
+use Mezzio\Session\LazySession;
 
 use function class_exists;
 use function count;
@@ -55,16 +55,16 @@ abstract class AbstractWord extends AbstractAdapter
     /**
      * Session
      *
-     * @var SessionInterface|null
+     * @var LazySession|null
      */
     protected $session;
 
     /**
      * Class name for sessions
      *
-     * @var class-string<SessionInterface>
+     * @var class-string<LazySession>
      */
-    protected $sessionClass = SessionInterface::class;
+    protected $sessionClass = LazySession::class;
 
     /**
      * Should the numbers be used or only letters
@@ -270,7 +270,7 @@ abstract class AbstractWord extends AbstractAdapter
      *
      * @return $this Provides a fluent interface
      */
-    public function setSession(SessionInterface $session)
+    public function setSession(LazySession $session)
     {
         $this->session     = $session;
         $this->keepSession = true;
@@ -287,7 +287,7 @@ abstract class AbstractWord extends AbstractAdapter
     {
         if (empty($this->word)) {
             $session    = $this->getSession();
-            $this->word = $session->word;
+            $this->word = $session->get('word');
         }
         return $this->word;
     }
@@ -301,7 +301,7 @@ abstract class AbstractWord extends AbstractAdapter
     protected function setWord($word)
     {
         $session       = $this->getSession();
-        $session->word = $word;
+        $session->set('word', $word);
         $this->word    = $word;
         return $this;
     }
