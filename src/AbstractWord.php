@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace Laminas\Captcha;
 
+use Exception;
+use Laminas\Captcha\Exception\RuntimeException;
 use Mezzio\Session\LazySession;
 
-use function class_exists;
 use function count;
 use function is_array;
 use function md5;
@@ -55,16 +56,9 @@ abstract class AbstractWord extends AbstractAdapter
     /**
      * Session
      *
-     * @var LazySession|null
+     * @var SessionInterface|null
      */
     protected $session;
-
-    /**
-     * Class name for sessions
-     *
-     * @var class-string<LazySession>
-     */
-    protected $sessionClass = LazySession::class;
 
     /**
      * Should the numbers be used or only letters
@@ -80,19 +74,6 @@ abstract class AbstractWord extends AbstractAdapter
      */
     // protected $useCase = false;
 
-    /**
-     * Session lifetime for the captcha data
-     *
-     * @var int
-     */
-    protected $timeout = 300;
-
-    /**
-     * Should generate() keep session or create a new one?
-     *
-     * @var bool
-     */
-    protected $keepSession = false;
 
     /**#@+
      * Error codes
@@ -119,28 +100,6 @@ abstract class AbstractWord extends AbstractAdapter
      * @var int
      */
     protected $wordlen = 8;
-
-    /**
-     * Retrieve session class to utilize
-     *
-     * @return string
-     */
-    public function getSessionClass()
-    {
-        return $this->sessionClass;
-    }
-
-    /**
-     * Set session class for persistence
-     *
-     * @param  class-string $sessionClass
-     * @return AbstractWord Provides a fluent interface
-     */
-    public function setSessionClass($sessionClass)
-    {
-        $this->sessionClass = $sessionClass;
-        return $this;
-    }
 
     /**
      * Retrieve word length to use when generating captcha
@@ -190,40 +149,6 @@ abstract class AbstractWord extends AbstractAdapter
     }
 
     /**
-     * Set timeout for session token
-     *
-     * @param  int $ttl
-     * @return AbstractWord Provides a fluent interface
-     */
-    public function setTimeout($ttl)
-    {
-        $this->timeout = (int) $ttl;
-        return $this;
-    }
-
-    /**
-     * Get session token timeout
-     *
-     * @return int
-     */
-    public function getTimeout()
-    {
-        return $this->timeout;
-    }
-
-    /**
-     * Sets if session should be preserved on generate()
-     *
-     * @param bool $keepSession Should session be kept on generate()?
-     * @return AbstractWord Provides a fluent interface
-     */
-    public function setKeepSession($keepSession)
-    {
-        $this->keepSession = $keepSession;
-        return $this;
-    }
-
-    /**
      * Numbers should be included in the pattern?
      *
      * @return bool
@@ -248,19 +173,13 @@ abstract class AbstractWord extends AbstractAdapter
     /**
      * Get session object
      *
-     * @throws Exception\InvalidArgumentException
-     * @return Container
+     * @throws Exception\RuntimeException
+     * @return SessionInterface
      */
     public function getSession()
     {
         if (! isset($this->session)) {
-            $id = $this->getId();
-            if (! class_exists($this->sessionClass)) {
-                throw new Exception\InvalidArgumentException("Session class $this->sessionClass not found");
-            }
-            $this->session = new $this->sessionClass('Laminas_Form_Captcha_' . $id);
-            $this->session->setExpirationHops(1, null);
-            $this->session->setExpirationSeconds($this->getTimeout());
+            throw new RuntimeException('Session not found');
         }
         return $this->session;
     }
@@ -273,7 +192,6 @@ abstract class AbstractWord extends AbstractAdapter
     public function setSession(LazySession $session)
     {
         $this->session     = $session;
-        $this->keepSession = true;
 
         return $this;
     }
@@ -342,9 +260,6 @@ abstract class AbstractWord extends AbstractAdapter
      */
     public function generate()
     {
-        if (! $this->keepSession) {
-            $this->session = null;
-        }
         $id = $this->generateRandomId();
         $this->setId($id);
         $word = $this->generateWord();
